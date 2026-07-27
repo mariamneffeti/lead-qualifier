@@ -430,6 +430,17 @@
     .lqw-panel { transition: opacity 0.01s linear; }
   }
 </style>
+
+<script>
+  // ============================================================
+  // THIS IS JUST FOR DEMONSTRATION / TESTING.
+  // In your real production application, your backend/frontend
+  // would set a global variable like this if a user logs in.
+  // Uncomment the line below to test the "logged in" behavior!
+  // ============================================================
+  // window.CURRENT_USER_EMAIL = "logged_in_user@example.com";
+</script>
+
 </head>
 <body>
 
@@ -549,11 +560,14 @@
   // CONFIG — the only section you should need to edit.
   // ============================================================
   const CONFIG = {
-    webhookUrl: 'https://YOUR-N8N-INSTANCE/webhook/lead-chat', // production Chat Trigger / Webhook URL
+    webhookUrl: 'https://mariamneffetii.app.n8n.cloud/webhook/lead-chat', // production Chat Trigger / Webhook URL
     authHeaderName: '',   // e.g. 'X-Widget-Secret' — leave blank if you're not using header auth
     authHeaderValue: '',  // the shared secret value, if authHeaderName is set
     botName: 'Lead Desk',
-    welcomeMessage: "Hi! I can help figure out whether we're a good fit — what are you looking to solve?"
+    welcomeMessage: "Hi! I can help figure out whether we're a good fit — what are you looking to solve?",
+    // Check if the host page provided an email (e.g., user is logged in)
+    // We check the window object for 'CURRENT_USER_EMAIL' as defined in the <head> script.
+    userEmail: window.CURRENT_USER_EMAIL || null
   };
 
   // ============================================================
@@ -664,14 +678,22 @@
       const headers = { 'Content-Type': 'application/json' };
       if (CONFIG.authHeaderName) headers[CONFIG.authHeaderName] = CONFIG.authHeaderValue;
 
-      const res = await fetch("https://mariamneffetii.app.n8n.cloud/webhook/lead-chat", {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
+      // Construct the payload
+      const payload = {
           session_id: sessionId,
           message: text,
           timestamp: new Date().toISOString()
-        })
+      };
+
+      // If we grabbed an email from the logged-in user, attach it!
+      if (CONFIG.userEmail) {
+          payload.email = CONFIG.userEmail;
+      }
+
+      const res = await fetch(CONFIG.webhookUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) throw new Error('Bad response: ' + res.status);
