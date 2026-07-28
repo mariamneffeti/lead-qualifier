@@ -585,7 +585,6 @@
     </svg>
   </button>
 </div>
-
 <script>
 (function () {
   // ============================================================
@@ -645,8 +644,6 @@
   const statusDot = document.getElementById('lqw-status-dot');
   const statusText = document.getElementById('lqw-status-text');
   const botNameEl = document.getElementById('lqw-bot-name');
-  
-  // New Mic DOM ref
   const micBtn = document.getElementById('lqw-mic');
 
   botNameEl.textContent = CONFIG.botName;
@@ -658,26 +655,26 @@
   }
 
   // ============================================================
-  // Voice Input (Web Speech API)
+  // Voice Input (Web Speech API) — FIXED VERSION
   // ============================================================
   let recognition = null;
   let isRecording = false;
 
-  // Check if browser supports speech recognition
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = true;
+    recognition.lang = 'en-US'; // Force English recognition
 
-    recognition.onstart = function() {
+    recognition.onstart = function () {
       isRecording = true;
       micBtn.classList.add('recording');
-      input.placeholder = "Listening...";
-      input.value = ""; 
+      input.placeholder = 'Listening…';
+      input.value = '';
     };
 
-    recognition.onresult = function(event) {
+    recognition.onresult = function (event) {
       let finalTranscript = '';
       let interimTranscript = '';
       for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -687,50 +684,56 @@
           interimTranscript += event.results[i][0].transcript;
         }
       }
-      
       if (finalTranscript || interimTranscript) {
         input.value = finalTranscript || interimTranscript;
-        // Auto-resize input box
         input.style.height = 'auto';
         input.style.height = Math.min(input.scrollHeight, 100) + 'px';
       }
     };
 
-    recognition.onerror = function(event) {
-      console.error("Speech recognition error", event.error);
-      stopRecording();
-      input.placeholder = "Type a message…";
+    recognition.onerror = function (event) {
+      console.error('Speech recognition error:', event.error);
+      // Reset state without calling recognition.stop() again
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      input.placeholder = 'Type a message…';
     };
 
-    recognition.onend = function() {
-      stopRecording();
-      input.placeholder = "Type a message…";
+    recognition.onend = function () {
+      // Recognition has already stopped on its own — just reset the UI
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      input.placeholder = 'Type a message…';
       input.focus();
     };
   } else {
-    // Hide mic button if browser doesn't support it (e.g. Firefox without flags)
     micBtn.style.display = 'none';
   }
 
   function stopRecording() {
+    if (!isRecording) return; // Already stopped, do nothing
     isRecording = false;
     micBtn.classList.remove('recording');
-    if (recognition) recognition.stop();
+    input.placeholder = 'Type a message…';
+    try {
+      recognition.stop(); // This will trigger onend, but onend now just resets UI safely
+    } catch (e) {
+      // Already stopped — ignore
+    }
   }
 
-    micBtn.addEventListener('click', () => {
+  micBtn.addEventListener('click', function () {
     if (!recognition) {
-      alert("Your browser doesn't support speech recognition. Try using Chrome or Edge.");
+      alert("Your browser doesn't support speech recognition. Try Chrome or Edge.");
       return;
     }
     if (isRecording) {
       stopRecording();
     } else {
-      isRecording = true; // Update immediately to prevent double-click issues
       try {
-        recognition.start();
+        recognition.start(); // onstart callback will set isRecording = true
       } catch (err) {
-        console.log("Mic is already listening.");
+        console.log('Mic already active, ignoring.');
       }
     }
   });
@@ -740,14 +743,14 @@
   // ============================================================
   function renderMessages() {
     messagesEl.innerHTML = '';
-    messages.forEach((m) => {
+    messages.forEach(function (m) {
       const div = document.createElement('div');
       div.className = 'lqw-msg ' + m.role;
       div.textContent = m.text;
       if (m.role === 'error') {
         const retry = document.createElement('button');
         retry.textContent = 'Retry';
-        retry.onclick = () => retryLast();
+        retry.onclick = function () { retryLast(); };
         div.appendChild(retry);
       }
       messagesEl.appendChild(div);
@@ -783,20 +786,20 @@
     showTyping();
     input.disabled = true;
     sendBtn.disabled = true;
-    micBtn.disabled = true; // Disable mic while waiting
+    micBtn.disabled = true;
 
     try {
       const headers = { 'Content-Type': 'application/json' };
       if (CONFIG.authHeaderName) headers[CONFIG.authHeaderName] = CONFIG.authHeaderValue;
 
       const payload = {
-          session_id: sessionId,
-          message: text,
-          timestamp: new Date().toISOString()
+        session_id: sessionId,
+        message: text,
+        timestamp: new Date().toISOString()
       };
 
       if (CONFIG.userEmail) {
-          payload.email = CONFIG.userEmail;
+        payload.email = CONFIG.userEmail;
       }
 
       const res = await fetch(CONFIG.webhookUrl, {
@@ -809,7 +812,7 @@
       const data = await res.json();
 
       hideTyping();
-      messages.push({ role: 'assistant', text: data.reply || "…", ts: Date.now() });
+      messages.push({ role: 'assistant', text: data.reply || '…', ts: Date.now() });
       saveMessages(messages);
       renderMessages();
       setStatus(data.status === 'qualified' ? 'qualified' : 'idle');
@@ -822,14 +825,14 @@
     } finally {
       input.disabled = false;
       sendBtn.disabled = false;
-      micBtn.disabled = false; // Re-enable mic
+      micBtn.disabled = false;
       input.focus();
     }
   }
 
   function retryLast() {
     if (!lastUserText) return;
-    messages = messages.filter((m) => m.role !== 'error');
+    messages = messages.filter(function (m) { return m.role !== 'error'; });
     saveMessages(messages);
     renderMessages();
     sendToWebhook(lastUserText);
@@ -838,12 +841,9 @@
   function handleSend() {
     const text = input.value.trim();
     if (!text) return;
-    
-    // Stop recording if the user hits send while speaking
     if (isRecording) stopRecording();
-
     lastUserText = text;
-    messages.push({ role: 'user', text, ts: Date.now() });
+    messages.push({ role: 'user', text: text, ts: Date.now() });
     saveMessages(messages);
     renderMessages();
     input.value = '';
@@ -854,7 +854,7 @@
   // ============================================================
   // Wiring
   // ============================================================
-  launcher.addEventListener('click', () => {
+  launcher.addEventListener('click', function () {
     const isOpen = root.classList.toggle('lqw-open');
     launcher.setAttribute('aria-label', isOpen ? 'Close chat' : 'Open chat');
     launcher.setAttribute('aria-expanded', String(isOpen));
@@ -863,13 +863,13 @@
   });
 
   sendBtn.addEventListener('click', handleSend);
-  input.addEventListener('keydown', (e) => {
+  input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   });
-  input.addEventListener('input', () => {
+  input.addEventListener('input', function () {
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 100) + 'px';
   });
@@ -878,6 +878,5 @@
   setStatus('idle');
 })();
 </script>
-
 </body>
 </html>
