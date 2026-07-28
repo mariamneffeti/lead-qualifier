@@ -718,7 +718,7 @@
     if (recognition) recognition.stop();
   }
 
-  micBtn.addEventListener('click', () => {
+    micBtn.addEventListener('click', () => {
     if (!recognition) {
       alert("Your browser doesn't support speech recognition. Try using Chrome or Edge.");
       return;
@@ -726,10 +726,14 @@
     if (isRecording) {
       stopRecording();
     } else {
-      recognition.start();
+      isRecording = true; // Update immediately to prevent double-click issues
+      try {
+        recognition.start();
+      } catch (err) {
+        console.log("Mic is already listening.");
+      }
     }
   });
-
 
   // ============================================================
   // Rendering
