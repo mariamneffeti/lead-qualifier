@@ -383,6 +383,36 @@
     border-top: 1px solid var(--lqw-border);
     background: var(--lqw-surface-2);
   }
+  
+  /* Voice Mic Button Styles */
+  .lqw-mic {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--lqw-border);
+    background: transparent;
+    color: var(--lqw-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+  }
+  .lqw-mic:hover { background: var(--lqw-surface); color: var(--lqw-text); }
+  .lqw-mic.recording {
+    background: rgba(226, 105, 90, 0.12);
+    color: var(--lqw-error);
+    border-color: var(--lqw-error);
+    animation: lqw-pulse-red 1.5s infinite;
+  }
+  @keyframes lqw-pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(226, 105, 90, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(226, 105, 90, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(226, 105, 90, 0); }
+  }
+  .lqw-mic svg { width: 18px; height: 18px; }
+
   .lqw-input {
     flex: 1;
     resize: none;
@@ -434,9 +464,6 @@
 <script>
   // ============================================================
   // THIS IS JUST FOR DEMONSTRATION / TESTING.
-  // In your real production application, your backend/frontend
-  // would set a global variable like this if a user logs in.
-  // Uncomment the line below to test the "logged in" behavior!
   // ============================================================
   // window.CURRENT_USER_EMAIL = "logged_in_user@example.com";
 </script>
@@ -444,10 +471,7 @@
 </head>
 <body>
 
-<!-- ============================================================
-     Host page — styled to match the reference screenshot. This is
-     just the demo backdrop; the widget below is the deliverable.
-     ============================================================ -->
+<!-- Host Page -->
 <nav class="tz-nav">
   <div class="tz-logo">
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -513,8 +537,7 @@
 </div>
 
 <!-- ============================================================
-     WIDGET MARKUP — copy this whole block, plus the <style> above
-     and the <script> below, into your site.
+     WIDGET MARKUP
      ============================================================ -->
 <div id="lqw-root">
   <div class="lqw-panel" role="dialog" aria-label="Chat" aria-hidden="true">
@@ -527,6 +550,15 @@
     </div>
     <div class="lqw-messages" id="lqw-messages" role="log" aria-live="polite"></div>
     <div class="lqw-inputbar">
+      <!-- NEW MICROPHONE BUTTON -->
+      <button class="lqw-mic" id="lqw-mic" aria-label="Use microphone" title="Click to speak">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="22"></line>
+        </svg>
+      </button>
+      
       <textarea
         class="lqw-input"
         id="lqw-input"
@@ -557,22 +589,19 @@
 <script>
 (function () {
   // ============================================================
-  // CONFIG — the only section you should need to edit.
+  // CONFIG 
   // ============================================================
   const CONFIG = {
-    webhookUrl: 'https://mariamneffetii.app.n8n.cloud/webhook/lead-chat', // production Chat Trigger / Webhook URL
-    authHeaderName: '',   // e.g. 'X-Widget-Secret' — leave blank if you're not using header auth
-    authHeaderValue: '',  // the shared secret value, if authHeaderName is set
+    webhookUrl: 'https://mariamneffetii.app.n8n.cloud/webhook/lead-chat', 
+    authHeaderName: '',   
+    authHeaderValue: '',  
     botName: 'Lead Desk',
     welcomeMessage: "Hi! I can help figure out whether we're a good fit — what are you looking to solve?",
-    // Check if the host page provided an email (e.g., user is logged in)
-    // We check the window object for 'CURRENT_USER_EMAIL' as defined in the <head> script.
     userEmail: window.CURRENT_USER_EMAIL || null
   };
 
   // ============================================================
-  // Session handling — one session_id per browser, reused across
-  // page reloads so the n8n side can look up conversation memory.
+  // Session handling 
   // ============================================================
   const STORAGE_KEY_SESSION = 'lqw_session_id';
   const STORAGE_KEY_MESSAGES_PREFIX = 'lqw_messages_';
@@ -601,7 +630,7 @@
   function saveMessages(messages) {
     try {
       localStorage.setItem(messagesKey, JSON.stringify(messages));
-    } catch (e) { /* storage full or disabled — fail silently */ }
+    } catch (e) { }
   }
 
   // ============================================================
@@ -616,6 +645,9 @@
   const statusDot = document.getElementById('lqw-status-dot');
   const statusText = document.getElementById('lqw-status-text');
   const botNameEl = document.getElementById('lqw-bot-name');
+  
+  // New Mic DOM ref
+  const micBtn = document.getElementById('lqw-mic');
 
   botNameEl.textContent = CONFIG.botName;
 
@@ -624,6 +656,80 @@
     messages = [{ role: 'assistant', text: CONFIG.welcomeMessage, ts: Date.now() }];
     saveMessages(messages);
   }
+
+  // ============================================================
+  // Voice Input (Web Speech API)
+  // ============================================================
+  let recognition = null;
+  let isRecording = false;
+
+  // Check if browser supports speech recognition
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onstart = function() {
+      isRecording = true;
+      micBtn.classList.add('recording');
+      input.placeholder = "Listening...";
+      input.value = ""; 
+    };
+
+    recognition.onresult = function(event) {
+      let finalTranscript = '';
+      let interimTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      
+      if (finalTranscript || interimTranscript) {
+        input.value = finalTranscript || interimTranscript;
+        // Auto-resize input box
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+      }
+    };
+
+    recognition.onerror = function(event) {
+      console.error("Speech recognition error", event.error);
+      stopRecording();
+      input.placeholder = "Type a message…";
+    };
+
+    recognition.onend = function() {
+      stopRecording();
+      input.placeholder = "Type a message…";
+      input.focus();
+    };
+  } else {
+    // Hide mic button if browser doesn't support it (e.g. Firefox without flags)
+    micBtn.style.display = 'none';
+  }
+
+  function stopRecording() {
+    isRecording = false;
+    micBtn.classList.remove('recording');
+    if (recognition) recognition.stop();
+  }
+
+  micBtn.addEventListener('click', () => {
+    if (!recognition) {
+      alert("Your browser doesn't support speech recognition. Try using Chrome or Edge.");
+      return;
+    }
+    if (isRecording) {
+      stopRecording();
+    } else {
+      recognition.start();
+    }
+  });
+
 
   // ============================================================
   // Rendering
@@ -673,19 +779,18 @@
     showTyping();
     input.disabled = true;
     sendBtn.disabled = true;
+    micBtn.disabled = true; // Disable mic while waiting
 
     try {
       const headers = { 'Content-Type': 'application/json' };
       if (CONFIG.authHeaderName) headers[CONFIG.authHeaderName] = CONFIG.authHeaderValue;
 
-      // Construct the payload
       const payload = {
           session_id: sessionId,
           message: text,
           timestamp: new Date().toISOString()
       };
 
-      // If we grabbed an email from the logged-in user, attach it!
       if (CONFIG.userEmail) {
           payload.email = CONFIG.userEmail;
       }
@@ -713,6 +818,7 @@
     } finally {
       input.disabled = false;
       sendBtn.disabled = false;
+      micBtn.disabled = false; // Re-enable mic
       input.focus();
     }
   }
@@ -728,6 +834,10 @@
   function handleSend() {
     const text = input.value.trim();
     if (!text) return;
+    
+    // Stop recording if the user hits send while speaking
+    if (isRecording) stopRecording();
+
     lastUserText = text;
     messages.push({ role: 'user', text, ts: Date.now() });
     saveMessages(messages);
