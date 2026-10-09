@@ -1,0 +1,10 @@
+{
+  "name": "Portfolio Demo - Human Review Decision",
+  "nodes": [
+    {"parameters": {"httpMethod": "POST", "path": "portfolio-lead-review", "responseMode": "responseNode", "options": {}}, "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [0, 0], "id": "83781903-e379-43ae-a4d6-f52648285d49", "name": "Reviewer Decision Webhook"},
+    {"parameters": {"jsCode": "const body = $input.first().json.body ?? {};\nif (typeof body.lead_id !== 'string' || !body.lead_id.startsWith('demo-')) throw new Error('A synthetic demo lead_id is required');\nif (!['approve','reject'].includes(body.decision)) throw new Error('decision must be approve or reject');\nconst approved = body.decision === 'approve';\nreturn [{json:{lead_id:body.lead_id,review_status:approved?'approved':'rejected',crm_handoff:approved?'ready_for_authorized_handoff':'blocked',outreach_sent:false,demo_mode:true,note:approved?'Synthetic approval recorded. No CRM write or outreach is performed.':'Synthetic lead rejected. No CRM write or outreach is performed.'}}];"}, "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [260, 0], "id": "64d73d9f-0ff2-4b82-8dc5-2c6d5869275f", "name": "Validate Human Decision"},
+    {"parameters": {"respondWith": "json", "responseBody": "={{ $json }}", "options": {"responseCode": 200}}, "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.4, "position": [520, 0], "id": "7ee561db-ef20-4808-b7c9-1ce1252f3bb8", "name": "Return Review Result"}
+  ],
+  "connections": {"Reviewer Decision Webhook": {"main": [[{"node": "Validate Human Decision", "type": "main", "index": 0}]]}, "Validate Human Decision": {"main": [[{"node": "Return Review Result", "type": "main", "index": 0}]]}},
+  "active": false, "settings": {"executionOrder": "v1"}, "versionId": "fbd8670a-c08c-4076-b3a5-b45f12a7c3f6", "meta": {"templateCredsSetupCompleted": false}, "tags": []
+}

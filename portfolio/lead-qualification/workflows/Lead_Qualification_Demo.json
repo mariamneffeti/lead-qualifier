@@ -1,0 +1,27 @@
+{
+  "name": "Portfolio Demo - Lead Qualification and Scoring",
+  "nodes": [
+    {
+      "parameters": {"httpMethod": "POST", "path": "portfolio-lead-qualifier", "responseMode": "responseNode", "options": {}},
+      "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [0, 0], "id": "d88802f4-459e-4ee4-a2b6-efcc46280811", "name": "Demo Intake Webhook"
+    },
+    {
+      "parameters": {"jsCode": "const body = $input.first().json.body ?? {};\nconst required = ['name','email','company','need','budget','timeline'];\nfor (const key of required) { if (typeof body[key] !== 'string' || !body[key].trim()) throw new Error('Missing required field: ' + key); }\nif (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(body.email)) throw new Error('Invalid email format');\nconst budget = { high: 25, mid: 18, low: 8, unknown: 0 }[body.budget];\nconst timing = { soon: 30, later: 18, research: 5 }[body.timeline];\nif (budget === undefined || timing === undefined) throw new Error('Unsupported budget or timeline value');\nconst decision = body.decision_maker === true || body.decision_maker === 'true';\nconst needPoints = /autom(at|ation)|workflow|agent|support|crm|process/i.test(body.need) ? 35 : 10;\nconst score = needPoints + budget + timing + (decision ? 10 : 0);\nconst qualified = score >= 70;\nreturn [{json:{lead_id:'demo-' + Date.now(),name:body.name.trim(),email:body.email.trim().toLowerCase(),company:body.company.trim(),need:body.need.trim(),score,score_reasons:{need:needPoints,budget,timeline:timing,decision_maker:decision?10:0},qualification_status:qualified?'qualified':'needs_review',approval_status:qualified?'pending':'not_required',crm_action:'none_demo_only',outreach_sent:false,demo_mode:true}}];"},
+      "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [240, 0], "id": "b2f18627-e5ea-4b22-84fe-8082921c9d52", "name": "Validate and Score Synthetic Lead"
+    },
+    {
+      "parameters": {"conditions": {"options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2}, "conditions": [{"leftValue": "={{ $json.qualification_status }}", "rightValue": "qualified", "operator": {"type": "string", "operation": "equals"}, "id": "a578a4ee-7332-4007-9573-c0a6faeead17"}], "combinator": "and"}, "options": {}},
+      "type": "n8n-nodes-base.if", "typeVersion": 2.2, "position": [500, 0], "id": "3d06e571-cc2b-403d-a93e-326980feb19c", "name": "Qualified?"
+    },
+    {
+      "parameters": {"respondWith": "json", "responseBody": "={{ $json }}", "options": {"responseCode": 200}},
+      "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.4, "position": [760, -120], "id": "f2a0108c-c5c7-4574-8d93-363ae153470f", "name": "Return Pending Review"
+    },
+    {
+      "parameters": {"respondWith": "json", "responseBody": "={{ $json }}", "options": {"responseCode": 200}},
+      "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.4, "position": [760, 120], "id": "0d8475de-91f6-4f2e-9f75-7678cbd908c2", "name": "Return Not Qualified"
+    }
+  ],
+  "connections": {"Demo Intake Webhook": {"main": [[{"node": "Validate and Score Synthetic Lead", "type": "main", "index": 0}]]}, "Validate and Score Synthetic Lead": {"main": [[{"node": "Qualified?", "type": "main", "index": 0}]]}, "Qualified?": {"main": [[{"node": "Return Pending Review", "type": "main", "index": 0}], [{"node": "Return Not Qualified", "type": "main", "index": 0}]]}},
+  "active": false, "settings": {"executionOrder": "v1"}, "versionId": "44573be3-5f0e-4f73-b6bd-0d5cbbfc5de5", "meta": {"templateCredsSetupCompleted": false}, "tags": []
+}
