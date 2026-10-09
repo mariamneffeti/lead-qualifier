@@ -3,14 +3,12 @@
 An n8n-based assistant that answers company questions with RAG, qualifies inbound leads, validates email addresses, and routes qualified prospects to sales tools.
 
 [![Built with n8n](https://img.shields.io/badge/automation-n8n-EA4B71)](https://n8n.io/)
-[![Live Demo](https://img.shields.io/badge/demo-placeholder-lightgrey)](#demo)
+[![Live Demo](https://img.shields.io/badge/demo-watch%20video-blue)](https://drive.google.com/file/d/1U0eff06DoqX4AHfy9hmTER32MMZ-WVDF/view?usp=sharing)
 [![License](https://img.shields.io/badge/license-not%20specified-lightgrey)](#license)
 
 ## Demo
 
-Add a short product walkthrough GIF here:
-
-![Lead qualification assistant demo](docs/demo.gif)
+Watch the [product demo video](https://drive.google.com/file/d/1U0eff06DoqX4AHfy9hmTER32MMZ-WVDF/view?usp=sharing).
 
 ## Screenshots
 
