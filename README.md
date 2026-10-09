@@ -1,119 +1,75 @@
 # AI Lead Qualification Assistant
 
-An n8n-based assistant that answers company questions with RAG, qualifies inbound leads, validates email addresses, and routes qualified prospects to sales tools.
+An AI-powered lead qualification demo built with n8n. It combines a website chat interface with a conversational agent that answers company questions from a document knowledge base, gathers lead details, and routes qualified conversations through email verification and sales tools.
 
 [![Built with n8n](https://img.shields.io/badge/automation-n8n-EA4B71)](https://n8n.io/)
-[![Live Demo](https://img.shields.io/badge/demo-watch%20video-blue)](https://drive.google.com/file/d/1U0eff06DoqX4AHfy9hmTER32MMZ-WVDF/view?usp=sharing)
-[![License](https://img.shields.io/badge/license-not%20specified-lightgrey)](#license)
+[![Watch the demo](https://img.shields.io/badge/demo-watch%20video-blue)](https://drive.google.com/file/d/1U0eff06DoqX4AHfy9hmTER32MMZ-WVDF/view?usp=sharing)
 
 ## Demo
 
-Watch the [product demo video](https://drive.google.com/file/d/1U0eff06DoqX4AHfy9hmTER32MMZ-WVDF/view?usp=sharing).
+[Watch the product walkthrough](https://drive.google.com/file/d/1U0eff06DoqX4AHfy9hmTER32MMZ-WVDF/view?usp=sharing).
 
-## Screenshots
+## What it does
 
-Add screenshots when available:
-
-- Chat experience: `docs/screenshots/chat.png`
-- n8n qualification workflow: `docs/screenshots/lead-qualifier-workflow.png`
-- n8n ingestion workflow: `docs/screenshots/rag-workflow.png`
-
-## Features
-
-- **RAG ingestion:** Watches a Google Drive folder, downloads new files, loads document content, splits text, creates embeddings, and inserts vectors into Pinecone.
-- **Conversational lead scoring:** Uses an AI agent and structured output to gather a prospect's email, company, budget, timeline, need, and decision-maker status, then classify the conversation.
-- **Knowledge-grounded answers:** The agent can query the Pinecone vector store before returning to qualification questions.
-- **CRM triggering:** Checks qualified email addresses with Hunter and creates or updates a HubSpot contact for deliverable addresses.
-- **Sales notification and human review:** Sends qualified lead details to Slack for the sales team to review. The current workflow does not pause for an explicit approval before CRM actions.
-- **Fallback handling:** Returns separate responses for ongoing conversations, unqualified leads, and emails that fail verification.
-- **Conversation memory:** Uses Redis chat memory keyed by session ID.
-- **Scheduling link lookup:** Calls Calendly after the Slack notification and includes the resulting step in the webhook response path.
+- Chats with prospective customers through a lightweight website widget.
+- Uses an OpenAI model to gather a prospect’s business need, budget, timeline, decision-maker status, company, and email through a natural conversation.
+- Retrieves company information from Pinecone so answers can be grounded in ingested documents.
+- Keeps conversation context in Redis, keyed by the visitor’s session ID.
+- Routes conversations as gathering, qualified, or disqualified.
+- Checks qualified email addresses with Hunter before creating or updating a HubSpot contact.
+- Sends sales notifications to Slack and looks up the Calendly account as part of the qualified-lead flow.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    G[Google Drive] --> I[n8n RAG ingestion]
-    I --> V[(Pinecone vector DB)]
-    V --> Q[n8n Lead Qualifier]
-    C[Website chat UI] --> Q
-    Q --> H[Hunter email verification]
-    H --> CRM[HubSpot CRM]
-    CRM --> S[Slack sales notification]
-    S --> N[Calendly lookup and response]
+    D[Google Drive documents] --> R[n8n ingestion workflow]
+    R --> P[(Pinecone knowledge base)]
+    U[Website chat widget] --> W[n8n qualification workflow]
+    W --> A[OpenAI agent]
+    A --> P
+    A --> M[(Redis conversation memory)]
+    W --> H[Hunter email verification]
+    H --> C[HubSpot contact]
+    C --> S[Slack notification]
+    S --> L[Calendly lookup]
 ```
 
-## Stack
+## Technology
 
-- **Automation/orchestration:** n8n
-- **LLM:** OpenAI Chat Model (`gpt-5-mini` in the exported workflow)
+- **Orchestration:** n8n
+- **Chat model:** OpenAI `gpt-5-mini`
 - **Embeddings:** OpenAI `text-embedding-3-large` with 1024 dimensions
-- **Vector database:** Pinecone
+- **Knowledge store:** Pinecone
 - **Conversation memory:** Redis
-- **Lead verification and enrichment:** Hunter; additional enrichment can be connected as the workflow evolves
-- **CRM and notification:** HubSpot and Slack
-- **Scheduling:** Calendly API
-- **UI hosting:** Static HTML; the demo UI can be hosted on Vercel
-
-## Quickstart
-
-1. Import `Rag.json` and `Lead_Qualifier.json` into your n8n instance.
-2. Create and assign n8n credentials for Google Drive, Pinecone, OpenAI, Redis, Hunter, HubSpot, Slack, and Calendly as required by each workflow.
-3. Review the Google Drive folder, Pinecone index and endpoint, Slack channel, and webhook settings for your environment.
-4. Configure the Pinecone API key in n8n credentials. `Rag.json` currently contains an empty `Api-Key` header on its HTTP Request node; configure it before enabling ingestion.
-5. Host `frontend/index.html` as a static page and set its webhook URL to the production webhook URL for the Lead Qualifier workflow.
-6. Test both workflows with sample documents and leads, then activate them.
-
-Do not commit API keys, tokens, or production webhook URLs. The `.env.example` file is informational; this project reads credentials from n8n rather than loading local environment variables.
+- **Lead and sales integrations:** Hunter, HubSpot, Slack, and Calendly
+- **Chat interface:** Static HTML, CSS, and JavaScript
 
 ## Workflows
 
-### `Rag.json` — Google Drive ingestion
+### Lead qualification — `Lead_Qualifier.json`
 
-The Google Drive trigger polls a selected folder every minute for newly created files. The workflow downloads each file, sends a Pinecone HTTP request with a `fileId` filter, and sends the downloaded content through a binary document loader, recursive character text splitter, OpenAI embeddings, and Pinecone vector insertion. The data loader attaches the Drive file ID and filename as metadata.
+The workflow accepts a chat message and session ID at the `/lead-chat` webhook. The AI agent uses Redis memory and the Pinecone vector store, then returns a structured result. Ongoing conversations get a chat reply; qualified leads go through Hunter email verification and, for deliverable addresses, the HubSpot, Slack, and Calendly steps; disqualified leads receive a polite response.
 
-The exported graph starts the filter request and the vector-store insertion as sibling paths after download. Confirm the Pinecone request semantics and execution ordering in your n8n environment before relying on replacement/deletion behavior for updated documents.
+### Knowledge ingestion — `Rag.json`
 
-### `Lead_Qualifier.json` — chat qualification
+The workflow watches a Google Drive folder for new files, downloads them, splits their content into chunks, creates embeddings, and inserts them into Pinecone with file metadata. The exported workflow also contains a Pinecone HTTP Request node with an empty API key and a project-specific endpoint, so that node must be configured for the target Pinecone project before ingestion is enabled.
 
-The webhook accepts chat messages. The AI Agent uses Redis session memory, the OpenAI chat model, a structured output parser, and the Pinecone vector store as a knowledge tool. A Switch node routes the result:
+## Run the demo
 
-- **Still gathering:** Return the assistant response to the chat client.
-- **Qualified:** Send the extracted email to Hunter. If deliverable, create or update a HubSpot contact, notify the Slack channel, call Calendly, then respond to the webhook. If not deliverable, alert Slack and return an email-correction response.
-- **Disqualified:** Return a polite fallback response.
+1. Import `Lead_Qualifier.json` into an n8n instance.
+2. Configure n8n credentials for OpenAI, Redis, and Pinecone. The Pinecone index should use 1024-dimensional vectors to match the embedding configuration.
+3. Configure Hunter, HubSpot, Slack, and Calendly credentials and account-specific selections if you want to demonstrate the qualified-lead path.
+4. Activate the workflow and copy the production URL for its `/lead-chat` webhook.
+5. In `frontend/index.html`, replace the `webhookUrl` value in the `CONFIG` object with that production webhook URL.
+6. Host `frontend/index.html` as a static page, for example on Vercel, and open it to try the chat.
 
-## Key technical decisions
+To demonstrate company-specific answers, import and configure `Rag.json`, provide Google Drive credentials, select a folder, configure the Pinecone HTTP Request node for your index, and ingest documents before testing the chat.
 
-- **Why n8n:** The workflows make integrations, branching, and credential bindings inspectable and editable without a custom orchestration service.
-- **RAG design:** Company documents are embedded and stored in Pinecone; the qualification agent retrieves company information through a vector-store tool rather than relying on model memory.
-- **Structured output:** The output parser defines the fields needed by downstream routing and CRM actions.
-- **Validation before CRM:** Hunter verification gates the HubSpot contact action to reduce invalid lead records.
-- **Fallbacks:** Explicit routes keep gathering, disqualified, and undeliverable-email conversations from being treated as successful qualified leads.
-- **Human-in-the-loop:** Slack provides sales visibility for qualified leads. An approval checkpoint is not currently wired into the automation.
-- **Retries and resilience:** No explicit retry policy is configured in the exported workflow JSON. Configure n8n error workflows/retries and service-specific timeouts as appropriate when deploying.
+All service credentials belong in n8n’s Credentials settings. Do not put API keys or tokens in the frontend or commit them to the repository. The exported workflows contain account-specific settings that should be reviewed when connecting your own services.
 
-## Results
+## Implementation notes
 
-Replace these placeholders with measured results from a real deployment:
-
-- Leads processed: **TBD**
-- Time saved per lead: **TBD**
-- Cost reduction: **TBD**
-
-## Roadmap
-
-- Add an explicit human approval step before CRM writes.
-- Add and document retry/error workflows for external service failures.
-- Add automated evaluation cases for qualification quality and grounded answers.
-- Capture deployment metrics for lead throughput, time saved, and operating cost.
-- Add demo GIF and workflow screenshots.
-
-## License
-
-No license is currently specified in this repository. Add a `LICENSE` file to define reuse terms.
-
-## Contact
-
-Maintainer: **Add your name**  
-GitHub: **Add your profile or repository link**  
-Email: **Add your preferred contact email**
+- The qualification workflow sends the qualified lead to CRM after email verification. Slack provides sales visibility, but the workflow does not currently wait for a human approval before the CRM action.
+- The exported workflows do not define explicit retry policies or error workflows.
+- The RAG workflow’s Pinecone filter request and insertion paths should be reviewed in n8n before relying on document replacement or deletion behavior.
