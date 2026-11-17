@@ -1,0 +1,8 @@
+# Secrets
+.env
+*.local
+
+# Internal prep notes
+*_TODO.md
+INTERVIEW_PREP_TODO.md
+SCALE_TODO.md
