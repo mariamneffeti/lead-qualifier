@@ -13,10 +13,10 @@
         "triggerOn": "specificFolder",
         "folderToWatch": {
           "__rl": true,
-          "value": "1kKnjlqwvbxd_hEF2TzXAdTxVAT2JRE1l",
+          "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID",
           "mode": "list",
-          "cachedResultName": "Company data",
-          "cachedResultUrl": "https://drive.google.com/drive/folders/1kKnjlqwvbxd_hEF2TzXAdTxVAT2JRE1l"
+          "cachedResultName": "YOUR_GOOGLE_DRIVE_FOLDER",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/YOUR_GOOGLE_DRIVE_FOLDER_ID"
         },
         "event": "fileCreated",
         "options": {}
@@ -66,9 +66,9 @@
         "mode": "insert",
         "pineconeIndex": {
           "__rl": true,
-          "value": "trizen",
+          "value": "YOUR_PINECONE_INDEX",
           "mode": "list",
-          "cachedResultName": "trizen"
+          "cachedResultName": "YOUR_PINECONE_INDEX"
         },
         "options": {}
       },
@@ -155,7 +155,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://trizen-x4nnzr8.svc.aped-4627-b74a.pinecone.io",
+        "url": "https://YOUR_PINECONE_INDEX_HOST",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

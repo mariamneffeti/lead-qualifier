@@ -93,7 +93,7 @@ For importable n8n examples, see [`portfolio/lead-qualification/workflows`](port
 
 ## Optional: Connect the Integration Templates
 
-`Lead_Qualifier.json` and `Rag.json` are integration templates, not the local demo. Running them requires an n8n instance and your own credentials for the services you enable, including OpenAI, Redis, Pinecone, Google Drive, Hunter, HubSpot, and Slack. Some services may require paid accounts or incur usage charges.
+`Lead_Qualifier.json` and `Rag.json` are integration templates, not the local demo. Running them requires an n8n instance and your own credentials for the services you enable, including OpenAI, Redis, Pinecone, Google Drive, Hunter, HubSpot, and Slack. Some services may require paid accounts or incur usage charges. Replace the Google Drive folder and Pinecone index placeholders in `Rag.json` with resources in your own accounts before using that template.
 
 > **Data handling:** The root `frontend/index.html` chat sends messages to the n8n webhook configured in its `CONFIG.webhookUrl`. The qualification workflow may pass submitted information to enabled third-party services and may create CRM records or send notifications. Use only synthetic test data and a webhook you control. Do not point the frontend at a client or production workflow for this portfolio demo.
 
