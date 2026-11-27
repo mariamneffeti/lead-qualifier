@@ -7,9 +7,7 @@ An AI-powered lead qualification and sales automation pipeline built with n8n. C
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 > [!NOTE]
-> **Implementation & Confidentiality Notice:**  
-> This repository presents the architecture, sanitized n8n workflow templates, and client-facing chat interface for an automated lead-qualification and enrichment system originally developed for production use. In accordance with client NDAs, private API keys, proprietary CRM properties, and confidential sales data remain redacted.
-
+> **Freelance work and public demo are separate:** The architecture below describes a lead-qualification system designed and implemented during a freelance engagement. The client's deployed system, data, credentials, and proprietary configuration are not included in this repository. The runnable public example under `portfolio/lead-qualification/` is a separate synthetic demonstration. Its browser simulation uses deterministic example logic, and its n8n demo workflows do not call an LLM, persist review decisions, connect to a CRM, or send outreach. The root `Lead_Qualifier.json` and `Rag.json` files are sanitized integration templates that require your own services and configuration; they are not a deployable copy of the client's system.
 ---
 
 ## Video Walkthrough
@@ -20,7 +18,7 @@ Watch a comprehensive end-to-end walkthrough demonstrating chat interaction, n8n
 
 ---
 
-## System Architecture
+## Freelance System Architecture (Reference)
 
 ```mermaid
 flowchart LR
@@ -36,7 +34,7 @@ flowchart LR
     S --> L[Calendly Scheduling Handoff]
 ```
 
-### Core Pipeline Capabilities
+### Capabilities of the Freelance System (Architecture Reference)
 * **Grounded Natural Conversations:** Uses OpenAI LLM connected to **Pinecone** to answer company and product FAQs from ingested documentation without hallucination.
 * **Session Persistence:** Maintains multi-turn context across chat visits using **Redis** keyed by session ID.
 * **Lead Scoring & Extraction:** Discretely extracts prospect budget, timeline, company size, decision-maker status, and email during natural dialogue.
@@ -57,21 +55,24 @@ flowchart LR
 
 ---
 
-## Included Workflows
+## Public Repository Contents
 
-1. **`Lead_Qualifier.json` (Main Qualification & Routing):**
-   * Webhook listener at `/lead-chat`.
-   * Integrates OpenAI conversational agent, Pinecone retrieval, and Redis session memory.
-   * Conditional routing: ongoing conversation, polite disqualification, or qualified prospect escalation through email verification, HubSpot, Slack, and Calendly.
-2. **`Rag.json` (Automated Document Ingestion):**
-   * Monitors Google Drive folder for new product / company documentation.
-   * Splits text, generates embeddings (`text-embedding-3-large`), and indexes into Pinecone namespaces.
-3. **`portfolio/lead-qualification/workflows/Lead_Review_Demo.json` (Human-in-the-Loop Review):**
-   * Checkpoint workflow enabling sales reps to inspect lead enrichment and approve outreach before customer-facing emails dispatch.
+### Integration templates
 
+- **`Lead_Qualifier.json`:** n8n qualification and routing template for an `/lead-chat` webhook. It references external LLM, vector search, session memory, email verification, CRM, and notification integrations. It needs your own credentials and review before use.
+- **`Rag.json`:** n8n document-ingestion template for Google Drive and Pinecone. Replace its resource placeholders with your own Drive folder and Pinecone index, then configure your credentials.
+
+These root-level files illustrate integrations and require external services. They are distinct from the local synthetic demo and do not include the client's deployed environment or credentials.
+
+### Synthetic n8n demo workflows
+
+- **[`Lead_Qualification_Demo.json`](portfolio/lead-qualification/workflows/Lead_Qualification_Demo.json):** validates and deterministically scores synthetic lead input, then returns a pending-review result.
+- **[`Lead_Review_Demo.json`](portfolio/lead-qualification/workflows/Lead_Review_Demo.json):** accepts a synthetic approve/reject decision. It does not persist the decision, write to HubSpot, or send outreach.
+
+Both demo exports are inactive on import and make no external calls. The standalone browser demo is in [`portfolio/lead-qualification/`](portfolio/lead-qualification/).
 ---
 
-## Tech Stack
+## Freelance System Technology Stack (Reference)
 
 * **Workflow Orchestration:** [n8n](https://n8n.io/)
 * **AI & Embeddings:** OpenAI (`gpt-4o-mini` / `text-embedding-3-large`)
