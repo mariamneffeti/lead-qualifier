@@ -66,7 +66,7 @@ flowchart LR
 2. **`Rag.json` (Automated Document Ingestion):**
    * Monitors Google Drive folder for new product / company documentation.
    * Splits text, generates embeddings (`text-embedding-3-large`), and indexes into Pinecone namespaces.
-3. **`workflows/Lead_Review_Demo.json` (Human-in-the-Loop Review):**
+3. **`portfolio/lead-qualification/workflows/Lead_Review_Demo.json` (Human-in-the-Loop Review):**
    * Checkpoint workflow enabling sales reps to inspect lead enrichment and approve outreach before customer-facing emails dispatch.
 
 ---
