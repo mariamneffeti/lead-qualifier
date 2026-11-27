@@ -82,16 +82,24 @@ flowchart LR
 
 ---
 
-## Local Setup & Quickstart
+## Quickstart: Synthetic Local Demo
 
-1. Import `Lead_Qualifier.json` and `Rag.json` into your n8n workspace.
-2. Configure credentials in n8n for OpenAI, Redis, Pinecone, Hunter, HubSpot, and Slack.
-3. Activate the workflow and obtain your production `/lead-chat` webhook URL.
-4. Update `CONFIG.webhookUrl` in `frontend/index.html` with your webhook endpoint.
-5. Open `frontend/index.html` in your browser to test the interactive chat interface.
+The recommended first run is the standalone portfolio demo. It needs no n8n instance, API key, or external account, and the browser simulation does not send data to a server.
+
+1. Open `portfolio/lead-qualification/index.html` in a browser.
+2. Try the synthetic lead qualification conversation and review interaction.
+
+For importable n8n examples, see [`portfolio/lead-qualification/workflows`](portfolio/lead-qualification/workflows). These demo workflows are inactive on import, use synthetic inputs, and do not connect to a CRM or send outreach. See the [portfolio demo README](portfolio/lead-qualification/README.md) for their limits.
+
+## Optional: Connect the Integration Templates
+
+`Lead_Qualifier.json` and `Rag.json` are integration templates, not the local demo. Running them requires an n8n instance and your own credentials for the services you enable, including OpenAI, Redis, Pinecone, Google Drive, Hunter, HubSpot, and Slack. Some services may require paid accounts or incur usage charges.
+
+> **Data handling:** The root `frontend/index.html` chat sends messages to the n8n webhook configured in its `CONFIG.webhookUrl`. The qualification workflow may pass submitted information to enabled third-party services and may create CRM records or send notifications. Use only synthetic test data and a webhook you control. Do not point the frontend at a client or production workflow for this portfolio demo.
+
+To experiment with the integration templates, import them into a separate development n8n instance, configure only the credentials needed for the nodes you intend to test, and keep CRM and notification actions disconnected or test-only. Review each workflow and service's behavior before activation.
 
 ---
-
 ## Contact
 
 **Meriem Neffeti**  
